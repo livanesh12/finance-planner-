@@ -1,0 +1,653 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Professional Finance Planner</title>
+  <!-- Fonts & Icons -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <!-- jsPDF & html2canvas for PDF generation -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+
+  <style>
+    :root{
+      --bg: #0b1220;
+      --card: #121a2b;
+      --muted: #9fb0d0;
+      --text: #e6ecff;
+      --accent: #5ad3ff;
+      --accent-2: #8ef6c1;
+      --danger: #ff6b6b;
+      --warning: #ffc857;
+    }
+
+    *{ box-sizing:border-box }
+    html,body{ height:100%; }
+    body{
+      margin:0; font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,"Helvetica Neue",Arial,sans-serif;
+      color:var(--text);
+      background:
+        radial-gradient(1200px 600px at 10% -10%, rgba(90,211,255,.15), transparent 55%),
+        radial-gradient(1200px 600px at 110% 10%, rgba(142,246,193,.15), transparent 55%),
+        linear-gradient(180deg, #0a0f1a 0%, #0b1220 100%);
+      min-height:100vh; display:flex; align-items:center; justify-content:center; padding:24px;
+    }
+
+    .app{ width:100%; max-width:1100px; }
+
+    .shell{ background:rgba(255,255,255,.03); backdrop-filter: blur(8px); border:1px solid rgba(255,255,255,.08);
+      border-radius:24px; overflow:hidden; box-shadow:0 20px 60px rgba(0,0,0,.35);
+    }
+
+    header{
+      display:flex; align-items:center; justify-content:space-between; padding:18px 22px; gap:12px;
+      background:linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,0));
+      border-bottom:1px solid rgba(255,255,255,.08);
+    }
+    .brand{ display:flex; align-items:center; gap:12px; font-weight:700; letter-spacing:.3px; }
+    .badge{ border:1px solid rgba(255,255,255,.14); padding:6px 10px; border-radius:999px; color:var(--muted); font-size:12px }
+
+    .pages{ position:relative; height:70vh; max-height:760px; }
+    .page{ position:absolute; inset:0; padding:26px; overflow:auto; opacity:0; transform:translateY(12px) scale(.98);
+      transition: opacity .4s ease, transform .5s cubic-bezier(.2,.8,.2,1); display:none;
+    }
+    .page.active{ display:block; opacity:1; transform:translateY(0) scale(1); }
+
+    .card{ background:var(--card); border:1px solid rgba(255,255,255,.06); border-radius:20px; padding:24px; }
+    .grid{ display:grid; gap:16px }
+    .grid.two{ grid-template-columns: repeat(2, minmax(0,1fr)); }
+    .grid.three{ grid-template-columns: repeat(3, minmax(0,1fr)); }
+    @media (max-width:900px){ .grid.two,.grid.three{ grid-template-columns: 1fr; } }
+
+    label{ font-size:14px; color:var(--muted); margin-bottom:6px; display:block }
+    input, select{ width:100%; padding:14px 14px; border-radius:12px; border:1px solid rgba(255,255,255,.14);
+      background:#0f1726; color:var(--text); outline:none; transition:border .2s ease; font-size:15px;
+    }
+    input:focus, select:focus{ border-color: var(--accent); box-shadow: 0 0 0 3px rgba(90,211,255,.15); }
+
+    .title{ font-size:28px; font-weight:800; letter-spacing:.2px; margin:0 0 6px 0 }
+    .sub{ color:var(--muted); margin:0 0 22px 0 }
+
+    .actions{ display:flex; justify-content:space-between; gap:10px; margin-top:18px }
+    .btn{ appearance:none; border:none; padding:12px 18px; border-radius:12px; font-weight:700; cursor:pointer; color:#0b1220 }
+    .btn-primary{ background: linear-gradient(90deg, var(--accent), var(--accent-2)); }
+    .btn-ghost{ background: transparent; color:var(--text); border:1px solid rgba(255,255,255,.18) }
+    .btn:disabled{ opacity:.5; cursor:not-allowed }
+
+    .intro{
+      display:grid; place-items:center; text-align:center; height:100%; padding:40px;
+      background: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="900" viewBox="0 0 1600 900"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="%235ad3ff" stop-opacity=".35"/><stop offset="100%" stop-color="%238ef6c1" stop-opacity=".35"/></linearGradient></defs><g fill="none" stroke="url(%23g)" stroke-opacity=".5"><path d="M0 450 Q400 300 800 450 T1600 450"/><path d="M0 520 Q400 360 800 520 T1600 520"/><path d="M0 380 Q400 220 800 380 T1600 380"/></g></svg>') center/cover no-repeat;
+      border-radius:18px; border:1px dashed rgba(255,255,255,.12);
+    }
+    .intro h1{ font-size:40px; margin:6px 0 10px 0 }
+    .intro p{ color:var(--muted); font-size:16px; max-width:720px; margin:0 auto 22px }
+
+    .note{ font-size:13px; color:var(--muted) }
+    .muted{ color:var(--muted) }
+
+    .inline{ display:flex; align-items:center; gap:12px }
+
+    .kpi{ display:grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap:12px; }
+    .kpi .item{ background:#0f1726; border:1px solid rgba(255,255,255,.06); border-radius:14px; padding:16px }
+    .kpi .item h4{ margin:0; font-size:12px; color:var(--muted); font-weight:600 }
+    .kpi .item p{ margin:6px 0 0; font-size:18px; font-weight:800 }
+
+    .hint{ padding:12px 14px; background:rgba(255,255,255,.05); border:1px solid rgba(255,255,255,.08); border-radius:12px; }
+    .warn{ color:var(--warning); }
+    .danger{ color:var(--danger); }
+
+    canvas{ background:#0f1726; border:1px solid rgba(255,255,255,.06); border-radius:14px; padding:10px }
+
+    .footer{ padding:14px 22px; color:var(--muted); font-size:12px; border-top:1px solid rgba(255,255,255,.08); display:flex; justify-content:space-between }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <div class="shell">
+      <header>
+        <div class="brand">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M4 12c0-4.418 3.582-8 8-8 2.761 0 5.217 1.402 6.682 3.53M20 12c0 4.418-3.582 8-8 8-2.761 0-5.217-1.402-6.682-3.53" stroke="url(#g)" stroke-width="2"/><defs><linearGradient id="g" x1="0" y1="0" x2="24" y2="24"><stop stop-color="#5ad3ff"/><stop offset="1" stop-color="#8ef6c1"/></linearGradient></defs></svg>
+          Finance Planner Pro
+          <span class="badge">v1.0</span>
+        </div>
+        <div class="badge">All data stays in your browser</div>
+      </header>
+
+      <div class="pages">
+        <!-- Page 1: Intro -->
+        <section class="page active" id="page-1">
+          <div class="intro">
+            <div>
+              <h1>Build a Clear Plan for Your Money</h1>
+              <p>Step through a professional planner to map your income, expenses, debt, emergency fund, and investments. Clean visuals, actionable insights, and a downloadable report at the end.</p>
+              <button class="btn btn-primary" onclick="nextPage()">Get started</button>
+              <div class="note" style="margin-top:10px">Tip: You can go Back on any page to edit inputs.</div>
+            </div>
+          </div>
+        </section>
+
+        <!-- Page 2: Name & Gender -->
+        <section class="page" id="page-2">
+          <div class="card">
+            <h2 class="title">Tell us about you</h2>
+            <p class="sub">Your details personalize the report.</p>
+            <div class="grid two">
+              <div>
+                <label for="name">Full Name</label>
+                <input id="name" type="text" placeholder="e.g., Alex Morgan" />
+              </div>
+              <div>
+                <label for="gender">Gender</label>
+                <select id="gender">
+                  <option value="">Select…</option>
+                  <option>Male</option>
+                  <option>Female</option>
+                  <option>Prefer not to say</option>
+                  <option>Other</option>
+                </select>
+              </div>
+            </div>
+            <div class="actions">
+              <button class="btn btn-ghost" onclick="prevPage()">Back</button>
+              <button class="btn btn-primary" onclick="nextPage()">Next</button>
+            </div>
+          </div>
+        </section>
+
+        <!-- Page 3: Income & Expenses -->
+        <section class="page" id="page-3">
+          <div class="card">
+            <h2 class="title">Income & Monthly Expenses</h2>
+            <p class="sub">Add your monthly salary and a realistic view of your expenses.</p>
+            <div class="grid two">
+              <div>
+                <label for="salary">Monthly Salary (RM)</label>
+                <input id="salary" type="number" min="0" step="0.01" placeholder="e.g., 4500" />
+              </div>
+            </div>
+
+            <div class="grid two">
+              <div>
+                <label for="car">Car Payment (RM)</label>
+                <input id="car" type="number" min="0" step="0.01" />
+              </div>
+              <div>
+                <label for="house">House Payment (RM)</label>
+                <input id="house" type="number" min="0" step="0.01" />
+              </div>
+              <div>
+                <label for="food">Food (RM)</label>
+                <input id="food" type="number" min="0" step="0.01" />
+              </div>
+              <div>
+                <label for="personal">Personal (RM)</label>
+                <input id="personal" type="number" min="0" step="0.01" />
+              </div>
+              <div>
+                <label for="household">Household Items (RM)</label>
+                <input id="household" type="number" min="0" step="0.01" />
+              </div>
+              <div>
+                <label for="others">Others (RM)</label>
+                <input id="others" type="number" min="0" step="0.01" />
+              </div>
+            </div>
+
+            <div class="actions">
+              <button class="btn btn-ghost" onclick="prevPage()">Back</button>
+              <button class="btn btn-primary" onclick="nextPage()">Next</button>
+            </div>
+          </div>
+        </section>
+
+        <!-- Page 4: Debt Info -->
+        <section class="page" id="page-4">
+          <div class="card">
+            <h2 class="title">Debt Details</h2>
+            <p class="sub">Enter your total debt and what you pay monthly.</p>
+            <div class="grid two">
+              <div>
+                <label for="debtTotal">Total Debt Amount (RM)</label>
+                <input id="debtTotal" type="number" min="0" step="0.01" placeholder="e.g., 12000" />
+              </div>
+              <div>
+                <label for="debtMonthly">Monthly Debt Payment (RM)</label>
+                <input id="debtMonthly" type="number" min="0" step="0.01" placeholder="e.g., 600" />
+              </div>
+            </div>
+
+            <div class="actions">
+              <button class="btn btn-ghost" onclick="prevPage()">Back</button>
+              <button class="btn btn-primary" onclick="handleDebtAndNext()">Next</button>
+            </div>
+          </div>
+        </section>
+
+        <!-- Page 5: Pie Chart (Expenses + Debt) -->
+        <section class="page" id="page-5">
+          <div class="card">
+            <h2 class="title">Spending Breakdown</h2>
+            <p class="sub">Your expenses and monthly debt payment shown together.</p>
+            <div class="grid two">
+              <div style="min-height:320px">
+                <canvas id="pieChart"></canvas>
+              </div>
+              <div class="grid" style="align-content:start">
+                <div class="kpi">
+                  <div class="item"><h4>Total Expenses</h4><p id="kpi-exp">RM 0</p></div>
+                  <div class="item"><h4>Monthly Debt</h4><p id="kpi-debt">RM 0</p></div>
+                  <div class="item"><h4>Salary</h4><p id="kpi-salary">RM 0</p></div>
+                </div>
+                <div class="hint">
+                  <div id="debtDurationText">—</div>
+                </div>
+              </div>
+            </div>
+            <div class="actions">
+              <button class="btn btn-ghost" onclick="prevPage()">Back</button>
+              <button class="btn btn-primary" onclick="nextPage()">Next</button>
+            </div>
+          </div>
+        </section>
+
+        <!-- Page 6: Bar Chart (Expenses) -->
+        <section class="page" id="page-6">
+          <div class="card">
+            <h2 class="title">Expenses – Bar View</h2>
+            <p class="sub">Same data, another lens to spot outliers.</p>
+            <div style="min-height:360px">
+              <canvas id="barChart"></canvas>
+            </div>
+            <div class="actions">
+              <button class="btn btn-ghost" onclick="prevPage()">Back</button>
+              <button class="btn btn-primary" onclick="nextPage()">Next</button>
+            </div>
+          </div>
+        </section>
+
+        <!-- Page 7: Emergency Fund -->
+        <section class="page" id="page-7">
+          <div class="card">
+            <h2 class="title">Emergency Fund (15%)</h2>
+            <p class="sub">Calculated as <strong>15%</strong> of money left after expenses and monthly debt payment.</p>
+            <div class="kpi" style="margin-bottom:10px">
+              <div class="item"><h4>Salary</h4><p id="ef-salary">RM 0</p></div>
+              <div class="item"><h4>After Bills</h4><p id="ef-after-bills">RM 0</p></div>
+              <div class="item"><h4>Emergency Fund (15%)</h4><p id="ef-amount">RM 0</p></div>
+            </div>
+            <div id="ef-message" class="hint">—</div>
+            <div class="actions">
+              <button class="btn btn-ghost" onclick="prevPage()">Back</button>
+              <button class="btn btn-primary" onclick="nextPage()">Next</button>
+            </div>
+          </div>
+        </section>
+
+        <!-- Page 8: Investment -->
+        <section class="page" id="page-8">
+          <div class="card">
+            <h2 class="title">Investment Planner</h2>
+            <p class="sub">We reserve your emergency fund, then show what’s left to invest.</p>
+
+            <div class="kpi" style="margin-bottom:10px">
+              <div class="item"><h4>Available to Invest</h4><p id="inv-available">RM 0</p></div>
+              <div class="item"><h4>Monthly Debt</h4><p id="inv-debt">RM 0</p></div>
+              <div class="item"><h4>Total Expenses</h4><p id="inv-exp">RM 0</p></div>
+            </div>
+
+            <div class="grid three">
+              <div>
+                <label for="invAmount">Amount to Invest (RM)</label>
+                <input id="invAmount" type="number" min="0" step="0.01" placeholder="e.g., 1000" />
+              </div>
+              <div>
+                <label for="invRate">Expected Annual Interest (%)</label>
+                <input id="invRate" type="number" min="0" step="0.01" placeholder="e.g., 6" />
+              </div>
+              <div>
+                <label for="invYears">Years</label>
+                <input id="invYears" type="number" min="1" step="1" placeholder="e.g., 5" />
+              </div>
+            </div>
+
+            <div class="actions" style="justify-content:flex-end">
+              <button class="btn btn-primary" onclick="generateInvestment()">Generate Insight</button>
+            </div>
+
+            <div class="grid" style="margin-top:8px">
+              <div class="hint" id="invSummary">Enter values and click Generate Insight.</div>
+              <canvas id="invChart" style="min-height:340px"></canvas>
+            </div>
+
+            <div class="actions">
+              <button class="btn btn-ghost" onclick="prevPage()">Back</button>
+              <button class="btn btn-primary" onclick="nextPage()">Next</button>
+            </div>
+          </div>
+        </section>
+
+        <!-- Page 9: Summary & PDF -->
+        <section class="page" id="page-9">
+          <div class="card">
+            <h2 class="title">Summary & Report</h2>
+            <p class="sub">Review your plan below, then download your custom PDF.</p>
+
+            <div class="grid two">
+              <div class="hint">
+                <strong>Profile</strong><br/>
+                <div id="sum-name">Name: —</div>
+                <div id="sum-gender">Gender: —</div>
+              </div>
+              <div class="hint">
+                <strong>Financials</strong><br/>
+                <div id="sum-salary">Salary: —</div>
+                <div id="sum-exp">Total Expenses: —</div>
+                <div id="sum-debt">Total Debt: —</div>
+                <div id="sum-debt-months">Debt Payoff (months): —</div>
+                <div id="sum-ef">Emergency Fund: —</div>
+                <div id="sum-inv">Investment Balance: —</div>
+              </div>
+            </div>
+
+            <div class="actions" style="justify-content:flex-end">
+              <button class="btn btn-primary" onclick="downloadPDF()">Download PDF Report</button>
+            </div>
+
+            <div class="actions">
+              <button class="btn btn-ghost" onclick="prevPage()">Back</button>
+              <button class="btn btn-primary" onclick="goTo(1)">Start Over</button>
+            </div>
+          </div>
+        </section>
+      </div>
+
+      <div class="footer">
+        <div>© <span id="year"></span> Finance Planner Pro</div>
+        <div class="muted">Made for clarity • Smooth transitions • Actionable insights</div>
+      </div>
+    </div>
+  </div>
+
+<script>
+  // ------- State -------
+  const state = {
+    name: '',
+    gender: '',
+    salary: 0,
+    expenses: { car:0, house:0, food:0, personal:0, household:0, others:0 },
+    debtTotal: 0,
+    debtMonthly: 0,
+    charts: { pie:null, bar:null, inv:null },
+    emergencyFund: 0,
+    investAvailable: 0,
+    debtMonths: null
+  };
+
+  const pages = Array.from(document.querySelectorAll('.page'));
+  let current = 1;
+
+  function formatRM(v){
+    if (isNaN(v) || !isFinite(v)) return 'RM 0';
+    return 'RM ' + Number(v).toLocaleString(undefined,{minimumFractionDigits:2, maximumFractionDigits:2});
+  }
+
+  function goTo(n){
+    current = Math.max(1, Math.min(pages.length, n));
+    pages.forEach((p,i)=>{
+      p.classList.toggle('active', i === (current-1));
+    });
+    if(current===5) buildPie();
+    if(current===6) buildBar();
+    if(current===7) computeEmergencyFund();
+    if(current===8) updateInvestmentHeader();
+    if(current===9) fillSummary();
+  }
+  function nextPage(){
+    collect();
+    goTo(current+1);
+  }
+  function prevPage(){
+    goTo(current-1);
+  }
+
+  function collect(){
+    // Page 2
+    state.name = document.getElementById('name').value?.trim() || state.name;
+    state.gender = document.getElementById('gender').value || state.gender;
+
+    // Page 3
+    const salary = parseFloat(document.getElementById('salary').value);
+    if(!isNaN(salary)) state.salary = salary;
+    ['car','house','food','personal','household','others'].forEach(k=>{
+      const v = parseFloat(document.getElementById(k).value);
+      if(!isNaN(v)) state.expenses[k] = v;
+    });
+
+    // Page 4
+    const dt = parseFloat(document.getElementById('debtTotal').value);
+    const dm = parseFloat(document.getElementById('debtMonthly').value);
+    if(!isNaN(dt)) state.debtTotal = dt;
+    if(!isNaN(dm)) state.debtMonthly = dm;
+  }
+
+  function handleDebtAndNext(){
+    collect();
+    // Debt payoff months (ceil). Guard against 0 or negative payment.
+    if(state.debtMonthly > 0){
+      state.debtMonths = Math.ceil(state.debtTotal / state.debtMonthly);
+    } else {
+      state.debtMonths = null;
+    }
+    nextPage();
+  }
+
+  function totals(){
+    const totalExp = Object.values(state.expenses).reduce((a,b)=>a+(+b||0),0);
+    return { totalExp };
+  }
+
+  // ------- Charts -------
+  function buildPie(){
+    const { totalExp } = totals();
+    // Update KPIs
+    document.getElementById('kpi-exp').textContent = formatRM(totalExp);
+    document.getElementById('kpi-debt').textContent = formatRM(state.debtMonthly);
+    document.getElementById('kpi-salary').textContent = formatRM(state.salary);
+
+    const debtText = (state.debtMonthly>0 && state.debtTotal>0)
+      ? `At RM ${state.debtMonthly.toLocaleString()} per month, it will take approximately ${state.debtMonths} month(s) to pay off RM ${state.debtTotal.toLocaleString()}.`
+      : `No monthly debt payment provided. Add it to view payoff timeframe.`;
+    document.getElementById('debtDurationText').textContent = debtText;
+
+    const labels = ['Car','House','Food','Personal','Household','Others','Debt (Monthly)'];
+    const data = [state.expenses.car, state.expenses.house, state.expenses.food, state.expenses.personal, state.expenses.household, state.expenses.others, state.debtMonthly];
+
+    const bright = ['#ff6384','#36a2eb','#ffcd56','#4bc0c0','#9966ff','#ff9f40','#2dd36f'];
+
+    const ctx = document.getElementById('pieChart');
+    if(state.charts.pie){ state.charts.pie.destroy(); }
+    state.charts.pie = new Chart(ctx, {
+      type: 'pie',
+      data: { labels, datasets: [{ data, backgroundColor: bright, borderWidth: 0 }] },
+      options: {
+        plugins: {
+          legend: { labels: { color:'#e6ecff' } },
+          tooltip: { callbacks: { label: (ctx) => `${ctx.label}: RM ${Number(ctx.raw||0).toLocaleString()}` } }
+        }
+      }
+    });
+  }
+
+  function buildBar(){
+    const lbl = ['Car','House','Food','Personal','Household','Others','Debt (Monthly)'];
+    const vals = [state.expenses.car, state.expenses.house, state.expenses.food, state.expenses.personal, state.expenses.household, state.expenses.others, state.debtMonthly];
+    const ctx = document.getElementById('barChart');
+    if(state.charts.bar){ state.charts.bar.destroy(); }
+    state.charts.bar = new Chart(ctx, {
+      type: 'bar',
+      data: { labels: lbl, datasets: [{ label:'Monthly Amount (RM)', data: vals }] },
+      options: {
+        scales: {
+          x: { ticks: { color:'#cfe1ff' }, grid: { color:'rgba(255,255,255,.06)'} },
+          y: { ticks: { color:'#cfe1ff' }, grid: { color:'rgba(255,255,255,.06)'}, beginAtZero:true }
+        },
+        plugins: { legend: { labels: { color:'#e6ecff' } } }
+      }
+    });
+  }
+
+  // ------- Emergency Fund -------
+  function computeEmergencyFund(){
+    const { totalExp } = totals();
+    const afterBills = (state.salary - totalExp - state.debtMonthly);
+    let ef = 0; let msg = '';
+    if(afterBills <= 0){
+      ef = 0;
+      msg = `⚠️ Not enough left after bills (short by ${formatRM(Math.abs(afterBills))}). Consider trimming expenses before saving an emergency fund.\n💡 Fun fact: A 3–6 month emergency fund can reduce financial stress by over 40% in households during income shocks.`;
+    } else {
+      ef = afterBills * 0.15; // 15%
+      msg = `✅ We set aside ${formatRM(ef)} (15% of what’s left after bills). Keep building this towards 3–6 months of essential expenses.`;
+    }
+    state.emergencyFund = ef;
+    document.getElementById('ef-salary').textContent = formatRM(state.salary);
+    document.getElementById('ef-after-bills').textContent = formatRM(afterBills);
+    document.getElementById('ef-amount').textContent = formatRM(ef);
+    document.getElementById('ef-message').textContent = msg;
+  }
+
+  // ------- Investment -------
+  function updateInvestmentHeader(){
+    const { totalExp } = totals();
+    const available = state.salary - totalExp - state.debtMonthly - state.emergencyFund;
+    state.investAvailable = Math.max(0, available);
+    document.getElementById('inv-available').textContent = formatRM(state.investAvailable);
+    document.getElementById('inv-debt').textContent = formatRM(state.debtMonthly);
+    document.getElementById('inv-exp').textContent = formatRM(totalExp);
+
+    // Suggest default invest amount equal to available (not set if zero)
+    const invAmountEl = document.getElementById('invAmount');
+    if(state.investAvailable > 0 && !invAmountEl.value){ invAmountEl.value = state.investAvailable.toFixed(2); }
+  }
+
+  function generateInvestment(){
+    const P = parseFloat(document.getElementById('invAmount').value) || 0;
+    const r = (parseFloat(document.getElementById('invRate').value) || 0) / 100; // annual
+    const years = Math.max(1, parseInt(document.getElementById('invYears').value || '0', 10));
+
+    if(P <= 0 || r <= 0 || years <= 0){
+      document.getElementById('invSummary').textContent = 'Please enter a positive investment amount, interest rate, and years.';
+      if(state.charts.inv){ state.charts.inv.destroy(); }
+      return;
+    }
+
+    const values = [];
+    for(let y=0; y<=years; y++){
+      const fv = P * Math.pow(1+r, y);
+      values.push(Number(fv.toFixed(2)));
+    }
+
+    const endValue = values[values.length-1];
+    document.getElementById('invSummary').textContent = `If you invest ${formatRM(P)} at ${ (r*100).toFixed(2) }% annually for ${years} year(s), your money could grow to about ${formatRM(endValue)} (not accounting for taxes/fees).`;
+
+    const ctx = document.getElementById('invChart');
+    if(state.charts.inv){ state.charts.inv.destroy(); }
+    state.charts.inv = new Chart(ctx, {
+      type: 'bar',
+      data: { labels: Array.from({length: years+1}, (_,i)=>`Year ${i}`), datasets: [{ label:'Projected Value (RM)', data: values }] },
+      options: {
+        scales: {
+          x: { ticks: { color:'#cfe1ff' }, grid: { color:'rgba(255,255,255,.06)'} },
+          y: { ticks: { color:'#cfe1ff' }, grid: { color:'rgba(255,255,255,.06)'}, beginAtZero:true }
+        },
+        plugins: { legend: { labels: { color:'#e6ecff' } } }
+      }
+    });
+  }
+
+  // ------- Summary -------
+  function fillSummary(){
+    const { totalExp } = totals();
+    document.getElementById('sum-name').textContent = `Name: ${state.name || '—'}`;
+    document.getElementById('sum-gender').textContent = `Gender: ${state.gender || '—'}`;
+    document.getElementById('sum-salary').textContent = `Salary: ${formatRM(state.salary)}`;
+    document.getElementById('sum-exp').textContent = `Total Expenses: ${formatRM(totalExp)}`;
+    document.getElementById('sum-debt').textContent = `Total Debt: ${formatRM(state.debtTotal)}`;
+    document.getElementById('sum-debt-months').textContent = `Debt Payoff (months): ${state.debtMonthly>0 ? state.debtMonths : '—'}`;
+    document.getElementById('sum-ef').textContent = `Emergency Fund: ${formatRM(state.emergencyFund)}`;
+    document.getElementById('sum-inv').textContent = `Investment Balance: ${formatRM(state.investAvailable)}`;
+  }
+
+  // ------- PDF Generation -------
+  async function downloadPDF(){
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF({ unit:'pt', format:'a4' });
+    const pageW = doc.internal.pageSize.getWidth();
+    const padX = 36; let y = 54;
+
+    const { totalExp } = totals();
+
+    // Page 1: Details
+    doc.setFont('helvetica','bold'); doc.setFontSize(18);
+    doc.text('Finance Planner Report', padX, y); y += 18;
+    doc.setFont('helvetica','normal'); doc.setFontSize(11);
+    y += 10;
+    const details = [
+      `Name: ${state.name || '—'}`,
+      `Gender: ${state.gender || '—'}`,
+      `Salary: ${state.salary ? 'RM ' + state.salary.toLocaleString() : '—'}`,
+      `Total Expenses: ${'RM ' + totalExp.toLocaleString()}`,
+      `Debt Amount: ${state.debtTotal ? 'RM ' + state.debtTotal.toLocaleString() : '—'}`,
+      `Debt Payoff (months): ${state.debtMonthly>0 ? state.debtMonths : '—'}`,
+      `Emergency Fund (15% rule): ${'RM ' + (state.emergencyFund||0).toLocaleString()}`,
+      `Investment Balance: ${'RM ' + (state.investAvailable||0).toLocaleString()}`
+    ];
+    details.forEach(line=>{ doc.text(line, padX, y+=18); });
+
+    // Page 2: Pie Chart
+    doc.addPage();
+    doc.setFont('helvetica','bold'); doc.setFontSize(16);
+    doc.text('Spending Breakdown – Pie', padX, 54);
+    const pieCanvas = document.getElementById('pieChart');
+    const pieImg = pieCanvas.toDataURL('image/png', 1.0);
+    doc.addImage(pieImg, 'PNG', padX, 80, pageW - padX*2, (pageW - padX*2) * 0.55);
+
+    // Page 3: Bar Chart
+    doc.addPage();
+    doc.setFont('helvetica','bold'); doc.setFontSize(16);
+    doc.text('Spending Breakdown – Bar', padX, 54);
+    const barCanvas = document.getElementById('barChart');
+    const barImg = barCanvas.toDataURL('image/png', 1.0);
+    doc.addImage(barImg, 'PNG', padX, 80, pageW - padX*2, (pageW - padX*2) * 0.55);
+
+    // Page 4: Advice
+    doc.addPage();
+    doc.setFont('helvetica','bold'); doc.setFontSize(16);
+    doc.text('Summary & Guidance', padX, 54);
+    doc.setFont('helvetica','normal'); doc.setFontSize(12);
+    const advice = [
+      'Savings: Aim to keep essential expenses under 50% of your income where possible. Pay yourself first by moving money to savings/investments on payday.',
+      'Emergency Fund: Build 3–6 months of essential expenses. Your 15% allocation is a smart automated start. Boost this during bonus months.',
+      'Debt: If interest is high, consider accelerating payments. Even RM 100 extra per month can shave months off your payoff timeline.',
+      'Investing: Stay consistent. Consider diversified, low-cost funds. Review your plan quarterly and rebalance annually.'
+    ];
+    const wrapped = doc.splitTextToSize(advice.join('\n\n'), pageW - padX*2);
+    doc.text(wrapped, padX, 80);
+
+    doc.save(`Finance-Planner-Report-${(state.name||'user').replace(/\s+/g,'_')}.pdf`);
+  }
+
+  // Init
+  document.getElementById('year').textContent = new Date().getFullYear();
+  window.goTo = goTo; window.nextPage = nextPage; window.prevPage = prevPage;
+  window.handleDebtAndNext = handleDebtAndNext;
+  window.generateInvestment = generateInvestment;
+  window.downloadPDF = downloadPDF;
+</script>
+</body>
+</html>
