@@ -487,11 +487,24 @@
   function buildBar(){
     const lbl = ['Car','House','Food','Personal','Household','Others','Debt (Monthly)'];
     const vals = [state.expenses.car, state.expenses.house, state.expenses.food, state.expenses.personal, state.expenses.household, state.expenses.others, state.debtMonthly];
+
+    // ---> CHANGE #1: make the bar chart colorful
+    const bright = ['#ff6384','#36a2eb','#ffcd56','#4bc0c0','#9966ff','#ff9f40','#2dd36f'];
+
     const ctx = document.getElementById('barChart');
     if(state.charts.bar){ state.charts.bar.destroy(); }
     state.charts.bar = new Chart(ctx, {
       type: 'bar',
-      data: { labels: lbl, datasets: [{ label:'Monthly Amount (RM)', data: vals }] },
+      data: {
+        labels: lbl,
+        datasets: [{
+          label:'Monthly Amount (RM)',
+          data: vals,
+          backgroundColor: bright,
+          borderColor: bright.map(c => c), // matching borders
+          borderWidth: 1.5
+        }]
+      },
       options: {
         scales: {
           x: { ticks: { color:'#cfe1ff' }, grid: { color:'rgba(255,255,255,.06)'} },
@@ -557,9 +570,25 @@
 
     const ctx = document.getElementById('invChart');
     if(state.charts.inv){ state.charts.inv.destroy(); }
+
+    // ---> CHANGE #2: switch to a bright LINE chart
     state.charts.inv = new Chart(ctx, {
-      type: 'bar',
-      data: { labels: Array.from({length: years+1}, (_,i)=>`Year ${i}`), datasets: [{ label:'Projected Value (RM)', data: values }] },
+      type: 'line',
+      data: {
+        labels: Array.from({length: years+1}, (_,i)=>`Year ${i}`),
+        datasets: [{
+          label:'Projected Value (RM)',
+          data: values,
+          borderColor: '#5ad3ff',
+          backgroundColor: 'rgba(90, 211, 255, 0.2)',
+          pointBackgroundColor: '#8ef6c1',
+          pointBorderColor: '#0b1220',
+          pointRadius: 4,
+          borderWidth: 3,
+          tension: 0.35,
+          fill: true
+        }]
+      },
       options: {
         scales: {
           x: { ticks: { color:'#cfe1ff' }, grid: { color:'rgba(255,255,255,.06)'} },
@@ -651,3 +680,4 @@
 </script>
 </body>
 </html>
+
